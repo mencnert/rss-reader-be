@@ -2,29 +2,35 @@ package main
 
 import (
 	"log"
-	"os"
 
 	"github.com/labstack/echo/v4"
-)
-
-var (
-	// port = GetEnvOrPanic("PORT")
-	port = "5000"
+	"github.com/spf13/viper"
 )
 
 func main() {
+	SetupViper()
 	e := echo.New()
 	e.GET("/", func(c echo.Context) error {
 		return c.HTML(200, "hello")
 	})
 
-	e.Start(":" + port)
+	err := e.Start(":" + viper.GetString("PORT"))
+	log.Printf("Error in echo: %v", err)
 }
 
-func GetEnvOrPanic(name string) string {
-	env := os.Getenv(name)
-	if env == "" {
-		log.Fatalf("Env '%s' is empty", name)
+func SetupViper() {
+	viper.SetConfigName("config")
+	viper.SetConfigType("yaml")
+	viper.AddConfigPath(".")
+	viper.AutomaticEnv()
+	err := viper.ReadInConfig()
+	if err != nil {
+		log.Fatalf("Unable to setup viper: %v", err)
 	}
-	return env
+	requiredKeys := []string{"PORT"}
+	for _, key := range requiredKeys {
+		if !viper.IsSet(key) {
+			log.Fatalf("Key '%s' is not set", key)
+		}
+	}
 }
