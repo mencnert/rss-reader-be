@@ -23,9 +23,12 @@ func SetupViper() {
 	viper.SetConfigType("yaml")
 	viper.AddConfigPath(".")
 	viper.AutomaticEnv()
-	err := viper.ReadInConfig()
-	if err != nil {
-		log.Fatalf("Unable to setup viper: %v", err)
+	if err := viper.ReadInConfig(); err != nil {
+		if _, ok := err.(viper.ConfigFileNotFoundError); ok {
+			log.Printf("Config file not found: %v", err)
+		} else {
+			log.Fatalf("Unable to setup viper: %v", err)
+		}
 	}
 	requiredKeys := []string{"PORT"}
 	for _, key := range requiredKeys {
