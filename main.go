@@ -2,38 +2,34 @@ package main
 
 import (
 	"log"
+	"rss-reader/config"
 
 	"github.com/labstack/echo/v4"
+	"github.com/labstack/echo/v4/middleware"
 	"github.com/spf13/viper"
 )
 
+var conf *viper.Viper = viper.New()
+
 func main() {
-	SetupViper()
+	if err := config.LoadConfig(conf, "PORT", "LOGIN", "PASSWORD"); err != nil {
+		log.Fatalf("Unable to load config: %v", err)
+	}
+
 	e := echo.New()
+	e.Use(middleware.BasicAuth(validateBasicAuth))
 	e.GET("/", func(c echo.Context) error {
 		return c.HTML(200, "hello")
 	})
 
-	err := e.Start(":" + viper.GetString("PORT"))
-	log.Printf("Error in echo: %v", err)
+	if err := e.Start(":" + conf.GetString("PORT")); err != nil {
+		log.Printf("Error in echo: %v", err)
+	}
 }
 
-func SetupViper() {
-	viper.SetConfigName("config")
-	viper.SetConfigType("yaml")
-	viper.AddConfigPath(".")
-	viper.AutomaticEnv()
-	if err := viper.ReadInConfig(); err != nil {
-		if _, ok := err.(viper.ConfigFileNotFoundError); ok {
-			log.Printf("Config file not found: %v", err)
-		} else {
-			log.Fatalf("Unable to setup viper: %v", err)
-		}
+func validateBasicAuth(user, pass string, c echo.Context) (bool, error) {
+	if user == conf.GetString("LOGIN") && pass == conf.GetString("PASSWORD") {
+		return true, nil
 	}
-	requiredKeys := []string{"PORT"}
-	for _, key := range requiredKeys {
-		if !viper.IsSet(key) {
-			log.Fatalf("Key '%s' is not set", key)
-		}
-	}
+	return false, nil
 }
