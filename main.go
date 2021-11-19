@@ -17,7 +17,11 @@ func main() {
 	}
 
 	e := echo.New()
+	e.Use(middleware.CORS())
 	e.Use(middleware.BasicAuth(validateBasicAuth))
+	e.POST("/login", func(c echo.Context) error {
+		return c.HTML(200, "OK")
+	})
 	e.GET("/", func(c echo.Context) error {
 		return c.HTML(200, "hello")
 	})
