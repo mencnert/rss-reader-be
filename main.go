@@ -3,7 +3,9 @@ package main
 import (
 	"log"
 	"rss-reader/config"
+	"time"
 
+	cron "github.com/go-co-op/gocron"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
 	"github.com/spf13/viper"
@@ -12,8 +14,12 @@ import (
 var conf *viper.Viper = viper.New()
 
 func main() {
-	if err := config.LoadConfig(conf, "PORT", "LOGIN", "PASSWORD"); err != nil {
+	if err := config.LoadConfig(conf, "PORT", "LOGIN", "PASSWORD", "RSS_FETCH_EVERY_N_SEC"); err != nil {
 		log.Fatalf("Unable to load config: %v", err)
+	}
+
+	if err := startRssFetchCronJob(conf.GetInt("RSS_FETCH_EVERY_N_SEC")); err != nil {
+		log.Fatalf("Error to setup rss fetch cron job: %v", err)
 	}
 
 	e := echo.New()
@@ -36,4 +42,18 @@ func validateBasicAuth(user, pass string, c echo.Context) (bool, error) {
 		return true, nil
 	}
 	return false, nil
+}
+
+func fetchRss() {
+	log.Println("TODO fetch new rss")
+}
+
+func startRssFetchCronJob(rssFetchEveryNSecs int) error {
+	sch := cron.NewScheduler(time.UTC)
+	_, err := sch.Every(rssFetchEveryNSecs).Seconds().Do(fetchRss)
+	if err != nil {
+		return err
+	}
+	sch.StartAsync()
+	return nil
 }
