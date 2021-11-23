@@ -25,12 +25,8 @@ func main() {
 	e := echo.New()
 	e.Use(middleware.CORS())
 	e.Use(middleware.BasicAuth(validateBasicAuth))
-	e.POST("/login", func(c echo.Context) error {
-		return c.HTML(200, "OK")
-	})
-	e.GET("/", func(c echo.Context) error {
-		return c.HTML(200, "hello")
-	})
+	e.POST("/checkauth", httpCheckAuth)
+	e.GET("/", httpSth)
 
 	if err := e.Start(":" + conf.GetString("PORT")); err != nil {
 		log.Printf("Error in echo: %v", err)
@@ -56,4 +52,10 @@ func startRssFetchCronJob(rssFetchEveryNSecs int) error {
 	}
 	sch.StartAsync()
 	return nil
+}
+func httpCheckAuth(c echo.Context) error {
+	return c.HTML(200, "OK")
+}
+func httpSth(c echo.Context) error {
+	return c.HTML(200, "hello")
 }
