@@ -1,2 +1,2 @@
-release: rss-reader migrate
+release: rss-reader migrate up
 web: rss-reader web
