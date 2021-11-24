@@ -1,3 +1,6 @@
 port: 5000
 login: user
 password: 123456
+rss_fetch_every_n_secs: 300
+clean_db_every_n_hours: 5
+database_url: db.url

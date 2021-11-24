@@ -1,1 +1,1 @@
-web: rss-reader
+web: rss-reader web
