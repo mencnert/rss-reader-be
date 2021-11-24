@@ -15,6 +15,7 @@ func newWebCmd() *cobra.Command {
 	webCmd := &cobra.Command{
 		Use: "web",
 		PreRunE: func(cmd *cobra.Command, args []string) error {
+			log.Println("Starting schedulers")
 			if err := startRssFetchCronJob(viper.GetInt("RSS_FETCH_EVERY_N_SECS")); err != nil {
 				log.Printf("Error to setup rss fetch cron job: %v", err)
 				return err

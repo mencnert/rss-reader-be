@@ -21,6 +21,7 @@ func newRootCmd(requiredKeys []string) *cobra.Command {
 			if err := setupConfig(requiredKeys); err != nil {
 				return err
 			}
+			log.Println("Connecting to DB")
 			db, err := sql.Open("postgres", viper.GetString("DATABASE_URL"))
 			if err != nil {
 				return err
@@ -29,7 +30,7 @@ func newRootCmd(requiredKeys []string) *cobra.Command {
 			return nil
 		},
 		PersistentPostRunE: func(cmd *cobra.Command, args []string) error {
-			log.Println("Closing connection to db...")
+			log.Println("Closing db connection")
 			return DB.Close()
 		},
 	}
@@ -45,6 +46,7 @@ func Execute(requiredKeys ...string) error {
 }
 
 func setupConfig(requiredKeys []string) error {
+	log.Println("Preparing viper config")
 	viper.SetConfigName("config")
 	viper.SetConfigType("yaml")
 	viper.AddConfigPath(".")
