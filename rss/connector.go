@@ -6,13 +6,9 @@ import (
 	"net/http"
 )
 
-type SofConnector interface {
-	Get(string) (RssFeed, error)
-}
+type Connector struct{}
 
-type SOF struct{}
-
-func (sof SOF) Get(url string) (RssFeed, error) {
+func (c Connector) Fetch(url string) (RssFeed, error) {
 	res, err := http.Get(url)
 	if err != nil {
 		return RssFeed{}, err
