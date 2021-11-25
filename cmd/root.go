@@ -47,8 +47,8 @@ func Execute(requiredKeys ...string) error {
 
 func setupConfig(requiredKeys []string) error {
 	log.Println("Preparing viper config")
-	viper.SetConfigName("config")
-	viper.SetConfigType("yaml")
+	viper.SetConfigName("app")
+	viper.SetConfigType("env")
 	viper.AddConfigPath(".")
 	viper.AutomaticEnv()
 
