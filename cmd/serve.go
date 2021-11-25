@@ -68,11 +68,11 @@ func startCleanDbCronJob(cleanDbEveryNHours int) error {
 	if _, err := sch.Every(cleanDbEveryNHours).Hours().Do(cleanDb); err != nil {
 		return err
 	}
-	go startWithDeplay(sch, 30*time.Second)
+	go startWithDelay(sch, 30*time.Second)
 	return nil
 }
 
-func startWithDeplay(scheduler *cron.Scheduler, delay time.Duration) {
+func startWithDelay(scheduler *cron.Scheduler, delay time.Duration) {
 	time.Sleep(delay)
 	scheduler.StartAsync()
 }
