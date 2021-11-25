@@ -28,7 +28,7 @@ func newWebCmd() *cobra.Command {
 		},
 		RunE: func(cmd *cobra.Command, args []string) error {
 			e := echo.New()
-			e.Use(middleware.CORS())
+			e.Use(newCorsMiddlewareWithOrigins(Config.CorsAllowOrigins))
 			e.Use(middleware.BasicAuth(validateBasicAuth))
 			e.POST("/checkauth", httpCheckAuth)
 			e.GET("/", httpSth)
@@ -37,6 +37,12 @@ func newWebCmd() *cobra.Command {
 		},
 	}
 	return webCmd
+}
+
+func newCorsMiddlewareWithOrigins(origins []string) echo.MiddlewareFunc {
+	corsConfig := middleware.DefaultCORSConfig
+	corsConfig.AllowOrigins = Config.CorsAllowOrigins
+	return middleware.CORSWithConfig(corsConfig)
 }
 
 func validateBasicAuth(user, pass string, c echo.Context) (bool, error) {

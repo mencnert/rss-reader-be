@@ -101,10 +101,11 @@ func bindViperEnvs() error {
 }
 
 type Configuration struct {
-	Port               int    `mapstructure:"PORT"                   validate:"required"`
-	Username           string `mapstructure:"LOGIN"                  validate:"required"`
-	Password           string `mapstructure:"PASSWORD"               validate:"required"`
-	RssFetchEveryNSecs int    `mapstructure:"RSS_FETCH_EVERY_N_SECS" validate:"min=30"`
-	CleanDbEveryNHours int    `mapstructure:"CLEAN_DB_EVERY_N_HOURS" validate:"min=1"`
-	DBUrl              string `mapstructure:"DATABASE_URL"           validate:"required,url"`
+	Port               int      `mapstructure:"PORT"                   validate:"required"`
+	Username           string   `mapstructure:"LOGIN"                  validate:"required"`
+	Password           string   `mapstructure:"PASSWORD"               validate:"required"`
+	RssFetchEveryNSecs int      `mapstructure:"RSS_FETCH_EVERY_N_SECS" validate:"min=30"`
+	CleanDbEveryNHours int      `mapstructure:"CLEAN_DB_EVERY_N_HOURS" validate:"min=1"`
+	DBUrl              string   `mapstructure:"DATABASE_URL"           validate:"required,url"`
+	CorsAllowOrigins   []string `mapstructure:"CORS_ALLOW_ORIGINS"     validate:"min=1,dive,min=1"`
 }
