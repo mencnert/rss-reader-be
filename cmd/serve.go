@@ -3,7 +3,9 @@ package cmd
 import (
 	"fmt"
 	"log"
+	"net/http"
 	"rss-reader/rss"
+	"strconv"
 	"time"
 
 	cron "github.com/go-co-op/gocron"
@@ -37,7 +39,8 @@ func newWebCmd() *cobra.Command {
 			e.Use(newCorsMiddlewareWithOrigins(Config.CorsAllowOrigins))
 			e.Use(middleware.BasicAuth(validateBasicAuth))
 			e.POST("/checkauth", httpCheckAuth)
-			e.GET("/", httpSth)
+			e.GET("/rss", httpGetRss)
+			e.PUT("/rss/:id", httpChangeViewedState)
 
 			return e.Start(fmt.Sprintf(":%d", Config.Port))
 		},
@@ -65,18 +68,7 @@ func fetchRss() {
 		if err != nil {
 			log.Printf("Error during fetch: %v\n", err)
 		}
-		//TODO: move to separate package
-		stmt, err := DB.Prepare("INSERT INTO rss (url, rank, title, last_update) VALUES ($1, $2, $3, NOW()) ON CONFLICT (url) DO UPDATE SET rank = excluded.rank, title = excluded.title, last_update = NOW();")
-		if err != nil {
-			log.Printf("Error during preparation of query: %v\n", err)
-			return
-		}
-		for _, entry := range feed.Entries {
-			if _, err := stmt.Exec(entry.Url, entry.Rank, entry.Title); err != nil {
-				log.Printf("Error during execution of query: %v\n", err)
-				return
-			}
-		}
+		rssRepo.SaveOrUpdateAll(feed.Entries)
 	}
 	log.Println("Updating rss done")
 }
@@ -112,6 +104,30 @@ func httpCheckAuth(c echo.Context) error {
 	return c.HTML(200, "OK")
 }
 
-func httpSth(c echo.Context) error {
-	return c.HTML(200, "hello")
+func httpGetRss(c echo.Context) error {
+	data, err := rssRepo.GetAll()
+	if err != nil {
+		return err
+	}
+	return c.JSON(http.StatusOK, data)
+}
+
+func httpChangeViewedState(c echo.Context) error {
+	i := c.Param("id")
+	id, err := strconv.Atoi(i)
+	if err != nil {
+		c.HTML(http.StatusBadRequest, fmt.Sprintf("Invalid path parameter id of type int: '%s'", i))
+		return nil
+	}
+
+	v := c.QueryParam("viewed")
+	viewed, err := strconv.ParseBool(v)
+	if err != nil {
+		c.HTML(http.StatusBadRequest, fmt.Sprintf("Invalid query parameter 'viewed' of type bool: '%s'", v))
+		return nil
+	}
+	if err := rssRepo.UpdateViewedById(id, viewed); err != nil {
+		return err
+	}
+	return c.JSON(http.StatusOK, struct{ Status string }{"OK"})
 }

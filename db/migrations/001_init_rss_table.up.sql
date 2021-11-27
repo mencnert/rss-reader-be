@@ -3,5 +3,6 @@ CREATE TABLE IF NOT EXISTS rss(
     url VARCHAR(50) UNIQUE NOT NULL,
     rank INT NOT NULL,
     title VARCHAR(255) NOT NULL,
-    last_update TIMESTAMP NOT NULL
+    viewed BOOLEAN DEFAULT false,
+    last_fetch TIMESTAMP NOT NULL
 );

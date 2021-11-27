@@ -92,7 +92,7 @@ func newMigrateToCmd() *cobra.Command {
 
 func prepareMigration(cmd *cobra.Command, args []string) error {
 	log.Println("DB migration: initialize migration")
-	driver, err := postgres.WithInstance(DB, &postgres.Config{})
+	driver, err := postgres.WithInstance(rssRepo.DB, &postgres.Config{})
 	if err != nil {
 		return err
 	}
