@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"database/sql"
 	"log"
 	"os"
 
@@ -17,7 +18,8 @@ var (
 
 func newMigrateCmd() *cobra.Command {
 	migrateCmd := &cobra.Command{
-		Use: "migrate",
+		Use:               "migrate",
+		PersistentPreRunE: prepareMigration,
 	}
 	migrateCmd.AddCommand(newMigrateUpCmd())
 	migrateCmd.AddCommand(newMigrateDownCmd())
@@ -28,8 +30,7 @@ func newMigrateCmd() *cobra.Command {
 
 func newMigrateUpCmd() *cobra.Command {
 	migrateUpCmd := &cobra.Command{
-		Use:     "up",
-		PreRunE: prepareMigration,
+		Use: "up",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			log.Println("DB migration: start")
 			defer log.Println("DB migration: done")
@@ -47,8 +48,7 @@ func newMigrateUpCmd() *cobra.Command {
 
 func newMigrateDownCmd() *cobra.Command {
 	migrateDownCmd := &cobra.Command{
-		Use:     "down",
-		PreRunE: prepareMigration,
+		Use: "down",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			log.Println("DB migration: start")
 			defer log.Println("DB migration: done")
@@ -67,8 +67,7 @@ func newMigrateDownCmd() *cobra.Command {
 func newMigrateToCmd() *cobra.Command {
 	var dbVersion uint
 	migrateToCmd := &cobra.Command{
-		Use:     "to",
-		PreRunE: prepareMigration,
+		Use: "to",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			log.Println("DB migration: start")
 			defer log.Println("DB migration: done")
@@ -92,14 +91,25 @@ func newMigrateToCmd() *cobra.Command {
 
 func prepareMigration(cmd *cobra.Command, args []string) error {
 	log.Println("DB migration: initialize migration")
-	driver, err := postgres.WithInstance(rssRepo.DB, &postgres.Config{})
+	if err := loadConfig(dbCfg); err != nil {
+		return err
+	}
+
+	log.Println("Connecting to DB")
+	db, err := sql.Open("postgres", dbCfg.DBUrl)
+	if err != nil {
+		return err
+	}
+	driver, err := postgres.WithInstance(db, &postgres.Config{})
 	if err != nil {
 		return err
 	}
 
 	m, err := migrate.NewWithDatabaseInstance(
 		"file://db/migrations",
-		"postgres", driver)
+		"postgres",
+		driver,
+	)
 
 	if err != nil {
 		return err

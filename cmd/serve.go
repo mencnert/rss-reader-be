@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	repo "rss-reader/repositories"
 	"rss-reader/rss"
 	"strconv"
 	"time"
@@ -17,32 +18,44 @@ import (
 var (
 	rssConnector = rss.Connector{}
 	feeds        = []string{"https://stackoverflow.com/feeds/tag?tagnames=go&sort=newest"}
+	rssRepo      repo.RssRepository
 )
 
 func newWebCmd() *cobra.Command {
 	webCmd := &cobra.Command{
 		Use: "web",
 		PreRunE: func(cmd *cobra.Command, args []string) error {
-			log.Println("Starting schedulers")
-			if err := startRssFetchCronJob(Config.RssFetchEveryNSecs); err != nil {
-				log.Printf("Error to setup rss fetch cron job: %v", err)
+			if err := loadConfig(webCfg); err != nil {
 				return err
 			}
-			if err := startCleanDbCronJob(Config.CleanDbEveryNHours); err != nil {
-				log.Printf("Error to setup clean db cron job: %v", err)
+			if err := loadConfig(dbCfg); err != nil {
 				return err
 			}
-			return nil
+			if err := loadConfig(schedulerCfg); err != nil {
+				return err
+			}
+			if err := startRssFetchCronJob(schedulerCfg.RssFetchEveryNSecs); err != nil {
+				return err
+			}
+			if err := startCleanDbCronJob(schedulerCfg.CleanDbEveryNHours); err != nil {
+				return err
+			}
+
+			rssRepo = repo.NewPgRssRepository(dbCfg.DBUrl)
+			return rssRepo.Open()
 		},
 		RunE: func(cmd *cobra.Command, args []string) error {
 			e := echo.New()
-			e.Use(newCorsMiddlewareWithOrigins(Config.CorsAllowOrigins))
+			e.Use(newCorsMiddlewareWithOrigins(webCfg.CorsAllowOrigins))
 			e.Use(middleware.BasicAuth(validateBasicAuth))
 			e.POST("/checkauth", httpCheckAuth)
 			e.GET("/rss", httpGetRss)
 			e.PUT("/rss/:id", httpChangeViewedState)
 
-			return e.Start(fmt.Sprintf(":%d", Config.Port))
+			return e.Start(fmt.Sprintf(":%d", webCfg.Port))
+		},
+		PostRunE: func(cmd *cobra.Command, args []string) error {
+			return rssRepo.Close()
 		},
 	}
 	return webCmd
@@ -50,12 +63,12 @@ func newWebCmd() *cobra.Command {
 
 func newCorsMiddlewareWithOrigins(origins []string) echo.MiddlewareFunc {
 	corsConfig := middleware.DefaultCORSConfig
-	corsConfig.AllowOrigins = Config.CorsAllowOrigins
+	corsConfig.AllowOrigins = webCfg.CorsAllowOrigins
 	return middleware.CORSWithConfig(corsConfig)
 }
 
 func validateBasicAuth(user, pass string, c echo.Context) (bool, error) {
-	if user == Config.Username && pass == Config.Password {
+	if user == webCfg.Username && pass == webCfg.Password {
 		return true, nil
 	}
 	return false, nil
@@ -78,6 +91,7 @@ func cleanDb() {
 }
 
 func startRssFetchCronJob(rssFetchEveryNSecs int) error {
+	log.Println("Starting rss fetch scheduler")
 	sch := cron.NewScheduler(time.UTC)
 	if _, err := sch.Every(rssFetchEveryNSecs).Seconds().Do(fetchRss); err != nil {
 		return err
@@ -87,6 +101,7 @@ func startRssFetchCronJob(rssFetchEveryNSecs int) error {
 }
 
 func startCleanDbCronJob(cleanDbEveryNHours int) error {
+	log.Println("Starting clean DB scheduler")
 	sch := cron.NewScheduler(time.UTC)
 	if _, err := sch.Every(cleanDbEveryNHours).Hours().Do(cleanDb); err != nil {
 		return err
