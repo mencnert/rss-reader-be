@@ -50,7 +50,7 @@ func newWebCmd() *cobra.Command {
 			e.Use(middleware.BasicAuth(validateBasicAuth))
 			e.POST("/checkauth", httpCheckAuth)
 			e.GET("/rss", httpGetRss)
-			e.PUT("/rss/:id", httpChangeViewedState)
+			e.PUT("/rss/:rss_id", httpUpdateRss)
 
 			return e.Start(fmt.Sprintf(":%d", webCfg.Port))
 		},
@@ -127,21 +127,19 @@ func httpGetRss(c echo.Context) error {
 	return c.JSON(http.StatusOK, data)
 }
 
-func httpChangeViewedState(c echo.Context) error {
-	i := c.Param("id")
-	id, err := strconv.Atoi(i)
+func httpUpdateRss(c echo.Context) error {
+	i := c.Param("rss_id")
+	rssId, err := strconv.Atoi(i)
 	if err != nil {
-		c.HTML(http.StatusBadRequest, fmt.Sprintf("Invalid path parameter id of type int: '%s'", i))
+		c.HTML(http.StatusBadRequest, fmt.Sprintf("Invalid path parameter rss_id of type int: '%s'", i))
 		return nil
 	}
-
-	v := c.QueryParam("viewed")
-	viewed, err := strconv.ParseBool(v)
-	if err != nil {
-		c.HTML(http.StatusBadRequest, fmt.Sprintf("Invalid query parameter 'viewed' of type bool: '%s'", v))
-		return nil
+	var rssDto repo.RssDTO
+	if err := c.Bind(&rssDto); err != nil {
+		return err
 	}
-	if err := rssRepo.UpdateViewedById(id, viewed); err != nil {
+	rssDto.Id = rssId
+	if err := rssRepo.Update(rssDto); err != nil {
 		return err
 	}
 	return c.JSON(http.StatusOK, struct{ Status string }{"OK"})

@@ -33,7 +33,7 @@ func (pg *pgRssRepository) Close() error {
 }
 
 func (pg *pgRssRepository) GetAll() ([]RssDTO, error) {
-	sqlQuery := `SELECT rss_id, url, rank, title, viewed FROM rss`
+	sqlQuery := `SELECT rss_id, url, rank, title, viewed, saved FROM rss`
 
 	rows, err := pg.db.Query(sqlQuery)
 	if err != nil {
@@ -43,7 +43,7 @@ func (pg *pgRssRepository) GetAll() ([]RssDTO, error) {
 	result := make([]RssDTO, 0)
 	for rows.Next() {
 		var dto RssDTO
-		if err := rows.Scan(&dto.Id, &dto.Url, &dto.Rank, &dto.Title, &dto.Viewed); err != nil {
+		if err := rows.Scan(&dto.Id, &dto.Url, &dto.Rank, &dto.Title, &dto.Viewed, &dto.Saved); err != nil {
 			return []RssDTO{}, err
 		}
 		result = append(result, dto)
@@ -75,18 +75,19 @@ func (pg *pgRssRepository) SaveOrUpdateAll(rssEntries []rss.RssEntry) error {
 	return nil
 }
 
-func (pg *pgRssRepository) UpdateViewedById(id int, viewed bool) error {
+func (pg *pgRssRepository) Update(rssDto RssDTO) error {
 	sqlQuery := `
 		UPDATE rss SET
-			viewed = $1
-		WHERE rss_id = $2`
+			viewed = $2,
+			saved  = $3
+		WHERE rss_id = $1`
 
 	stmt, err := pg.db.Prepare(sqlQuery)
 	if err != nil {
 		log.Printf("Error during preparation of query: %v\n", err)
 		return err
 	}
-	if _, err := stmt.Exec(viewed, id); err != nil {
+	if _, err := stmt.Exec(rssDto.Id, rssDto.Viewed, rssDto.Saved); err != nil {
 		log.Printf("Error during execution of query: %v\n", err)
 		return err
 	}

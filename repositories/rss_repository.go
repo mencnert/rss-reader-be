@@ -8,7 +8,7 @@ type RssRepository interface {
 	Open() error
 	SaveOrUpdateAll(rssEntries []rss.RssEntry) error
 	GetAll() ([]RssDTO, error)
-	UpdateViewedById(id int, viewed bool) error // TODO RENAME
+	Update(RssDTO) error
 	Close() error
 }
 
@@ -18,4 +18,5 @@ type RssDTO struct {
 	Rank   int    `json:"rank"`
 	Title  string `json:"title"`
 	Viewed bool   `json:"viewed"`
+	Saved  bool   `json:"saved"`
 }
