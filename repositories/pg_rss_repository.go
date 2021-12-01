@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"log"
 	"rss-reader/rss"
+	"time"
 
 	_ "github.com/lib/pq"
 )
@@ -51,6 +52,46 @@ func (pg *pgRssRepository) GetAll() ([]RssDTO, error) {
 	return result, nil
 }
 
+func (pg *pgRssRepository) GetQueueCount() (int, error) {
+	sqlQuery := `
+		SELECT count(rss_id) FROM rss
+		WHERE viewed = false;`
+
+	rows, err := pg.db.Query(sqlQuery)
+	if err != nil {
+		return 0, err
+	}
+	defer rows.Close()
+	var count int
+	for rows.Next() {
+		if err := rows.Scan(&count); err != nil {
+			return 0, err
+		}
+	}
+	return count, nil
+}
+
+func (pg *pgRssRepository) GetRssFromQueue() (RssDTO, error) {
+	sqlQuery := `
+		SELECT rss_id, url, rank, title, viewed, saved FROM rss
+		WHERE viewed = false
+		ORDER BY rss_id
+		LIMIT 1;`
+
+	rows, err := pg.db.Query(sqlQuery)
+	if err != nil {
+		return RssDTO{}, err
+	}
+	defer rows.Close()
+	var dto RssDTO
+	for rows.Next() {
+		if err := rows.Scan(&dto.Id, &dto.Url, &dto.Rank, &dto.Title, &dto.Viewed, &dto.Saved); err != nil {
+			return RssDTO{}, err
+		}
+	}
+	return dto, nil
+}
+
 func (pg *pgRssRepository) SaveOrUpdateAll(rssEntries []rss.RssEntry) error {
 	sqlQuery := `
 		INSERT INTO rss (url, rank, title, last_fetch)
@@ -93,6 +134,24 @@ func (pg *pgRssRepository) Update(rssDto RssDTO) error {
 	}
 
 	return nil
+}
+
+func (pg *pgRssRepository) DeleteInactiveRssOlderThan(ts time.Time) (int, error) {
+	sqlQuery := `
+		DELETE FROM rss
+		WHERE last_fetch < $1
+			AND saved = false;`
+
+	stmt, err := pg.db.Prepare(sqlQuery)
+	if err != nil {
+		return 0, err
+	}
+	res, err := stmt.Exec(ts)
+	if err != nil {
+		return 0, err
+	}
+	rows, err := res.RowsAffected()
+	return int(rows), err
 }
 
 func NewPgRssRepository(url string) *pgRssRepository {

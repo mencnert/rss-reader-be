@@ -17,8 +17,9 @@ import (
 
 var (
 	rssConnector = rss.Connector{}
-	feeds        = []string{"https://stackoverflow.com/feeds/tag?tagnames=go&sort=newest"}
-	rssRepo      repo.RssRepository
+	//TODO: move feeds to config
+	feeds   = []string{"https://stackoverflow.com/feeds/tag?tagnames=go&sort=newest"}
+	rssRepo repo.RssRepository
 )
 
 func newWebCmd() *cobra.Command {
@@ -51,6 +52,7 @@ func newWebCmd() *cobra.Command {
 			e.POST("/checkauth", httpCheckAuth)
 			e.GET("/rss", httpGetRss)
 			e.PUT("/rss/:rss_id", httpUpdateRss)
+			e.GET("/rss/queue/next", httpGetRssFromQueueWithCount)
 
 			return e.Start(fmt.Sprintf(":%d", webCfg.Port))
 		},
@@ -87,7 +89,14 @@ func fetchRss() {
 }
 
 func cleanDb() {
-	log.Println("TODO clean db")
+	t := time.Now().Add(-24 * time.Hour)
+	log.Println("Cleaning DB with TS:", t.Format("2006-01-02 15:04:05"))
+	deletedRowsCount, err := rssRepo.DeleteInactiveRssOlderThan(t)
+	if err != nil {
+		log.Printf("Error during cleaning of db: %v\n", err)
+		return
+	}
+	log.Println("Deleted rows:", deletedRowsCount)
 }
 
 func startRssFetchCronJob(rssFetchEveryNSecs int) error {
@@ -143,4 +152,24 @@ func httpUpdateRss(c echo.Context) error {
 		return err
 	}
 	return c.JSON(http.StatusOK, struct{ Status string }{"OK"})
+}
+
+func httpGetRssFromQueueWithCount(c echo.Context) error {
+	count, err := rssRepo.GetQueueCount()
+	if err != nil {
+		return err
+	}
+	if count < 1 {
+		return c.JSON(http.StatusOK, RssWithCount{Count: count})
+	}
+	rssDto, err := rssRepo.GetRssFromQueue()
+	if err != nil {
+		return err
+	}
+	return c.JSON(http.StatusOK, RssWithCount{Count: count, Rss: rssDto})
+}
+
+type RssWithCount struct {
+	Count int         `json:"count"`
+	Rss   interface{} `json:"rss,omitempty"`
 }
