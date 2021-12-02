@@ -13,6 +13,7 @@ type RssRepository interface {
 	GetRssFromQueue() (RssDTO, error)
 	Update(RssDTO) error
 	DeleteInactiveRssOlderThan(ts time.Time) (int, error)
+	SetAllAsViewed() (int, error)
 	Close() error
 }
 
