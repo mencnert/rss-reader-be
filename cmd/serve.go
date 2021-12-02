@@ -53,6 +53,7 @@ func newWebCmd() *cobra.Command {
 			e.GET("/rss", httpGetRss)
 			e.PUT("/rss/:rss_id", httpUpdateRss)
 			e.GET("/rss/queue/next", httpGetRssFromQueueWithCount)
+			e.DELETE("/rss/queue/clean", httpCleanQueue)
 
 			return e.Start(fmt.Sprintf(":%d", webCfg.Port))
 		},
@@ -167,6 +168,16 @@ func httpGetRssFromQueueWithCount(c echo.Context) error {
 		return err
 	}
 	return c.JSON(http.StatusOK, RssWithCount{Count: count, Rss: rssDto})
+}
+
+func httpCleanQueue(c echo.Context) error {
+	count, err := rssRepo.SetAllAsViewed()
+	if err != nil {
+		return err
+	}
+	log.Printf("Cleaning rss queue: %d\n", count)
+
+	return c.JSON(http.StatusOK, struct{}{})
 }
 
 type RssWithCount struct {

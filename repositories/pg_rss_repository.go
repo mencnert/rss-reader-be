@@ -154,6 +154,24 @@ func (pg *pgRssRepository) DeleteInactiveRssOlderThan(ts time.Time) (int, error)
 	return int(rows), err
 }
 
+func (pg *pgRssRepository) SetAllAsViewed() (int, error) {
+	sqlQuery := `
+		UPDATE rss
+		SET viewed = true
+		WHERE viewed = false;`
+
+	stmt, err := pg.db.Prepare(sqlQuery)
+	if err != nil {
+		return 0, err
+	}
+	res, err := stmt.Exec()
+	if err != nil {
+		return 0, err
+	}
+	rows, err := res.RowsAffected()
+	return int(rows), err
+}
+
 func NewPgRssRepository(url string) *pgRssRepository {
 	return &pgRssRepository{url: url}
 }
